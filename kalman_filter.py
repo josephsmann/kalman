@@ -91,32 +91,28 @@ def _(mo):
             "Constant velocity — state = [position, velocity], observe position": "cv",
             "Constant position (random walk) — state = [position, velocity], observe position": "cp",
             "Damped oscillator — state = [position, velocity], observe position": "osc",
-            "Custom — enter F and H below": "custom",
+            "Custom — edit F, H, x0 below": "custom",
         },
         value="Constant velocity — state = [position, velocity], observe position",
         label="Dynamics model",
     )
-    F00 = mo.ui.text(value="1.0", label="F[0,0]")
-    F01 = mo.ui.text(value="1.0", label="F[0,1]")
-    F10 = mo.ui.text(value="0.0", label="F[1,0]")
-    F11 = mo.ui.text(value="1.0", label="F[1,1]")
-    H0  = mo.ui.text(value="1.0", label="H[0,0]")
-    H1  = mo.ui.text(value="0.0", label="H[0,1]")
-    x0_0 = mo.ui.text(value="0.0", label="x0[0]")
-    x0_1 = mo.ui.text(value="1.0", label="x0[1]")
+    F_widget = mo.ui.matrix(value=[[1.0, 1.0], [0.0, 1.0]], step=0.1, label="F")
+    H_widget = mo.ui.matrix(value=[[1.0, 0.0]], step=0.1, label="H")
+    x0_widget = mo.ui.matrix(value=[[0.0], [1.0]], step=0.5, label="x0")
     mo.vstack([
         model_choice,
-        mo.md("**Custom 2x2 F and 1x2 H** (used only when model = Custom):"),
-        mo.hstack([F00, F01, F10, F11]),
-        mo.hstack([H0, H1]),
-        mo.md("**Initial true state:**"),
-        mo.hstack([x0_0, x0_1]),
+        mo.md("**F — state transition** (used directly when model = Custom; presets override it):"),
+        F_widget,
+        mo.md("**H — observation matrix:**"),
+        H_widget,
+        mo.md("**x0 — initial true state:**"),
+        x0_widget,
     ])
-    return F00, F01, F10, F11, H0, H1, model_choice, x0_0, x0_1
+    return F_widget, H_widget, model_choice, x0_widget
 
 
 @app.cell
-def _(F00, F01, F10, F11, H0, H1, mo, model_choice, np, x0_0, x0_1):
+def _(F_widget, H_widget, mo, model_choice, np, x0_widget):
     def _build_model():
         choice = model_choice.value
         if choice == "cv":
@@ -133,10 +129,9 @@ def _(F00, F01, F10, F11, H0, H1, mo, model_choice, np, x0_0, x0_1):
             ])
             H_ = np.array([[1.0, 0.0]])
         else:
-            F_ = np.array([[float(F00.value), float(F01.value)],
-                           [float(F10.value), float(F11.value)]])
-            H_ = np.array([[float(H0.value), float(H1.value)]])
-        x0_ = np.array([float(x0_0.value), float(x0_1.value)])
+            F_ = np.array(F_widget.value, dtype=float)
+            H_ = np.array(H_widget.value, dtype=float)
+        x0_ = np.array(x0_widget.value, dtype=float).flatten()
         return F_, H_, x0_
 
     F_model, H_model, x0_model = _build_model()

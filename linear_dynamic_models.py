@@ -83,31 +83,31 @@ def _(mo):
             "Unstable spiral (growing oscillation)": "spiral_unstable",
             "Stable node (pure decay, no oscillation)": "node",
             "Saddle (one stable, one unstable direction)": "saddle",
-            "Custom — enter A below": "custom",
+            "Custom — edit the A matrix below": "custom",
         },
         value="Stable spiral (decaying oscillation)",
         label="Example system",
     )
-    A00 = mo.ui.text(value="0.9", label="A[0,0]")
-    A01 = mo.ui.text(value="-0.3", label="A[0,1]")
-    A10 = mo.ui.text(value="0.3", label="A[1,0]")
-    A11 = mo.ui.text(value="0.9", label="A[1,1]")
-    x0_0 = mo.ui.text(value="3.0", label="x0[0]")
-    x0_1 = mo.ui.text(value="0.0", label="x0[1]")
+    A_widget = mo.ui.matrix(
+        value=[[0.9, -0.3], [0.3, 0.9]], step=0.1, label="A — state transition"
+    )
+    x0_widget = mo.ui.matrix(
+        value=[[3.0], [0.0]], step=0.5, label="x0 — initial state"
+    )
     steps = mo.ui.slider(10, 120, value=60, step=5, label="Time steps")
     mo.vstack([
         system_choice,
-        mo.md("**Custom 2x2 A** (used only when system = Custom):"),
-        mo.hstack([A00, A01, A10, A11]),
+        mo.md("**A matrix** (used directly when system = Custom; presets override it):"),
+        A_widget,
         mo.md("**Initial state x0:**"),
-        mo.hstack([x0_0, x0_1]),
+        x0_widget,
         steps,
     ])
-    return A00, A01, A10, A11, steps, system_choice, x0_0, x0_1
+    return A_widget, steps, system_choice, x0_widget
 
 
 @app.cell
-def _(A00, A01, A10, A11, np, system_choice, x0_0, x0_1):
+def _(A_widget, np, system_choice, x0_widget):
     def _build():
         c = system_choice.value
         if c == "spiral_stable":
@@ -123,12 +123,11 @@ def _(A00, A01, A10, A11, np, system_choice, x0_0, x0_1):
         elif c == "saddle":
             A_ = np.array([[1.15, 0.0], [0.0, 0.8]])
         else:
-            A_ = np.array([[float(A00.value), float(A01.value)],
-                           [float(A10.value), float(A11.value)]])
+            A_ = np.array(A_widget.value, dtype=float)
         return A_
 
     A = _build()
-    x0 = np.array([float(x0_0.value), float(x0_1.value)])
+    x0 = np.array(x0_widget.value, dtype=float).flatten()
     eigvals, eigvecs = np.linalg.eig(A)
     return A, eigvals, x0
 

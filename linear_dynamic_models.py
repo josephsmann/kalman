@@ -11,8 +11,9 @@ def _():
     import polars as pl
     import altair as alt
     import plotly.graph_objects as go
+    import plotly.figure_factory as ff
 
-    return alt, go, mo, np, pl
+    return alt, ff, go, mo, np, pl
 
 
 @app.cell
@@ -214,6 +215,80 @@ def _(alt, mo, np, pl, traj):
     )
 
     mo.hstack([_ts, _phase])
+    return
+
+
+@app.cell
+def _(mo):
+    mo.md(r"""
+    ### Vector field of the map
+
+    Every point in the plane gets pushed somewhere by $A$. Drawing that push as an
+    arrow at each grid point gives the system's **vector field** — the "flow" the
+    trajectory is riding on.
+
+    - **Displacement field $(A-I)x$** — the per-step *change* $x_{k+1}-x_k$. Arrows
+      point the way each point moves on one iteration; near a stable system they all
+      point inward toward the origin.
+    - **Map field $Ax$** — where each point lands after one step (the raw image).
+
+    The orange path is the same trajectory from above; notice it always travels
+    *along* the arrows.
+    """)
+    return
+
+
+@app.cell
+def _(mo):
+    field_choice = mo.ui.radio(
+        options={"Displacement (A − I)x — per-step change": "disp",
+                 "Map  Ax — image after one step": "map"},
+        value="Displacement (A − I)x — per-step change",
+        label="Vector field",
+    )
+    grid_n = mo.ui.slider(7, 25, value=15, step=2, label="Grid density")
+    mo.hstack([field_choice, grid_n])
+    return field_choice, grid_n
+
+
+@app.cell
+def _(A, ff, field_choice, go, grid_n, mo, np, traj):
+    _lim = 4.0
+    _g = np.linspace(-_lim, _lim, grid_n.value)
+    _xs, _ys = np.meshgrid(_g, _g)
+    _P = np.stack([_xs.ravel(), _ys.ravel()])
+
+    if field_choice.value == "disp":
+        _D = (A - np.eye(2)) @ _P
+        _scale, _title = 0.3, "Displacement field (A − I)x with trajectory"
+    else:
+        _D = A @ _P
+        _scale, _title = 0.18, "Map field Ax with trajectory"
+
+    _u = _D[0].reshape(_xs.shape)
+    _v = _D[1].reshape(_ys.shape)
+
+    _fig = ff.create_quiver(
+        _xs, _ys, _u, _v, scale=_scale, arrow_scale=0.4,
+        line=dict(color="steelblue", width=1), name="field",
+    )
+    _fig.add_trace(go.Scatter(
+        x=traj[:, 0], y=traj[:, 1], mode="lines+markers",
+        line=dict(color="darkorange", width=2),
+        marker=dict(size=4, color="darkorange"), name="trajectory",
+    ))
+    _fig.add_trace(go.Scatter(
+        x=[0], y=[0], mode="markers",
+        marker=dict(size=10, color="black", symbol="x"), name="origin",
+    ))
+    _fig.update_layout(
+        width=560, height=520, title=_title,
+        xaxis=dict(title="x[0]", range=[-_lim - 1, _lim + 1], zeroline=True),
+        yaxis=dict(title="x[1]", range=[-_lim - 1, _lim + 1],
+                   zeroline=True, scaleanchor="x", scaleratio=1),
+        margin=dict(l=0, r=0, t=40, b=0),
+    )
+    mo.as_html(_fig)
     return
 
 
@@ -449,6 +524,147 @@ def _(alt, go, mo, np, pl, traj3):
     )
 
     mo.vstack([_ts, mo.as_html(_fig)])
+    return
+
+
+@app.cell
+def _(mo):
+    mo.md(r"""
+    ## Second-order systems: the mass–spring–damper
+
+    Most physical "second-degree" systems obey one canonical equation — a mass on a
+    spring with a damper, a tuned circuit, a vehicle suspension:
+
+    $$\ddot{x} + 2\zeta\omega_n\,\dot{x} + \omega_n^2\,x = \omega_n^2\,u$$
+
+    Two numbers set *all* of its behavior:
+
+    - $\omega_n$ — the **natural frequency**: how fast it wants to oscillate.
+    - $\zeta$ — the **damping ratio**: how quickly oscillations die out.
+
+    In state-space form with $z = [x,\ \dot{x}]^\top$ this is a continuous linear system
+    $\dot{z} = A_c z + B u$:
+
+    $$A_c = \begin{bmatrix} 0 & 1 \\ -\omega_n^2 & -2\zeta\omega_n \end{bmatrix},
+    \qquad B = \begin{bmatrix} 0 \\ \omega_n^2 \end{bmatrix}.$$
+
+    Its **poles** are the eigenvalues of $A_c$:
+
+    $$s = -\zeta\omega_n \pm \omega_n\sqrt{\zeta^2 - 1}.$$
+
+    The four damping regimes:
+
+    | $\zeta$ | poles | behavior |
+    |---|---|---|
+    | $0$ | $\pm j\omega_n$ (on imaginary axis) | **undamped** — pure oscillation |
+    | $0<\zeta<1$ | complex pair, left half-plane | **underdamped** — decaying oscillation, overshoot |
+    | $\zeta=1$ | real, repeated | **critically damped** — fastest non-oscillatory |
+    | $\zeta>1$ | two distinct real | **overdamped** — slow, no overshoot |
+
+    Stability now means poles in the **left half-plane** ($\mathrm{Re}(s)<0$) — the
+    continuous-time analogue of "inside the unit circle".
+    """)
+    return
+
+
+@app.cell
+def _(mo):
+    zeta = mo.ui.slider(0.0, 2.0, value=0.3, step=0.01, label="ζ — damping ratio")
+    omega_n = mo.ui.slider(0.2, 5.0, value=2.0, step=0.1, label="ωₙ — natural frequency [rad/s]")
+    t_max = mo.ui.slider(5.0, 40.0, value=20.0, step=1.0, label="Simulation time [s]")
+    mo.vstack([zeta, omega_n, t_max])
+    return omega_n, t_max, zeta
+
+
+@app.cell
+def _(np, omega_n, t_max, zeta):
+    _z, _w = zeta.value, omega_n.value
+    Ac = np.array([[0.0, 1.0], [-_w**2, -2 * _z * _w]])
+    Bc = np.array([0.0, _w**2])
+    poles = np.linalg.eigvals(Ac)
+
+    _dt = 0.005
+    _n = int(t_max.value / _dt)
+    tgrid = np.linspace(0.0, t_max.value, _n)
+    resp = np.zeros((_n, 2))  # [x, xdot], unit step input u = 1
+
+    def _deriv(state):
+        return Ac @ state + Bc * 1.0
+
+    for _i in range(1, _n):
+        _s = resp[_i - 1]
+        _k1 = _deriv(_s)
+        _k2 = _deriv(_s + 0.5 * _dt * _k1)
+        _k3 = _deriv(_s + 0.5 * _dt * _k2)
+        _k4 = _deriv(_s + _dt * _k3)
+        resp[_i] = _s + (_dt / 6.0) * (_k1 + 2 * _k2 + 2 * _k3 + _k4)
+
+    # Step-response characteristics (underdamped only)
+    _x = resp[:, 0]
+    peak = float(_x.max())
+    overshoot = 100.0 * (peak - 1.0) / 1.0 if peak > 1.0 else 0.0
+    # 2% settling time
+    _settled = np.where(np.abs(_x - 1.0) > 0.02)[0]
+    settling = float(tgrid[_settled[-1]]) if len(_settled) else 0.0
+    if _z == 0:
+        regime = "undamped"
+    elif _z < 1:
+        regime = "underdamped"
+    elif _z == 1:
+        regime = "critically damped"
+    else:
+        regime = "overdamped"
+    return overshoot, poles, regime, resp, settling, tgrid
+
+
+@app.cell
+def _(mo, overshoot, poles, regime, settling):
+    mo.md(rf"""
+    ### This system &nbsp;—&nbsp; **{regime}**
+
+    Poles: $s = {poles[0].real:.3g}{'+' if poles[0].imag >= 0 else '-'}{abs(poles[0].imag):.3g}j,\ \
+    {poles[1].real:.3g}{'+' if poles[1].imag >= 0 else '-'}{abs(poles[1].imag):.3g}j$
+
+    - **Overshoot:** {overshoot:.1f}%  
+    - **2% settling time:** {settling:.2f} s  
+    - Real part $\mathrm{{Re}}(s) = {poles[0].real:.3g}$ → {'stable (decays)' if poles[0].real < 0 else 'marginal / unstable'}
+    """)
+    return
+
+
+@app.cell
+def _(alt, mo, np, pl, poles, resp, tgrid):
+    _step_df = pl.DataFrame({"t": tgrid, "x": resp[:, 0]})
+    _step = alt.Chart(_step_df).mark_line(color="steelblue").encode(
+        x=alt.X("t:Q", title="time [s]"),
+        y=alt.Y("x:Q", title="output x(t)"),
+        tooltip=["t:Q", "x:Q"],
+    )
+    _target = alt.Chart(pl.DataFrame({"y": [1.0]})).mark_rule(
+        color="firebrick", strokeDash=[5, 5]
+    ).encode(y="y:Q")
+    _step_chart = (_step + _target).properties(
+        width=420, height=300, title="Step response (target = 1, red dashed)"
+    )
+
+    # s-plane poles
+    _pole_df = pl.DataFrame({"re": poles.real, "im": poles.imag})
+    _lim = max(1.0, float(np.abs(np.concatenate([poles.real, poles.imag])).max()) * 1.3)
+    _imag_axis = alt.Chart(pl.DataFrame({"x": [0.0]})).mark_rule(
+        color="black", strokeDash=[3, 3]
+    ).encode(x=alt.X("x:Q", scale=alt.Scale(domain=[-_lim, _lim]), title="Re(s)"))
+    _pole_pts = alt.Chart(_pole_df).mark_point(
+        shape="cross", size=240, color="firebrick", strokeWidth=3, filled=False
+    ).encode(
+        x=alt.X("re:Q", scale=alt.Scale(domain=[-_lim, _lim])),
+        y=alt.Y("im:Q", scale=alt.Scale(domain=[-_lim, _lim]), title="Im(s)"),
+        tooltip=["re:Q", "im:Q"],
+    )
+    _pole_chart = (_imag_axis + _pole_pts).properties(
+        width=300, height=300, title="Poles in the s-plane (left of dashed line = stable)"
+    )
+
+    mo.hstack([_step_chart, _pole_chart])
     return
 
 

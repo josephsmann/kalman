@@ -16,7 +16,7 @@ def _():
 def _(SolveItWidget, mo):
     widget = mo.ui.anywidget(SolveItWidget(path="my_session.solveit.json"))
     widget
-    return (widget,)
+    return
 
 
 if __name__ == "__main__":

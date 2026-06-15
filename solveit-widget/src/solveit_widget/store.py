@@ -32,7 +32,7 @@ def export_markdown(document: Document) -> str:
                 if out.error:
                     block += f"\n\n```\n{out.error}\n```"
                 else:
-                    body = (out.stdout + out.result_repr).strip()
+                    body = "\n".join(p for p in (out.stdout.rstrip("\n"), out.result_repr) if p)
                     if body:
                         block += f"\n\n```\n{body}\n```"
             blocks.append(block)

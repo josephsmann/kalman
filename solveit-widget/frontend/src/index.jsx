@@ -4,6 +4,7 @@ import { EditorView, keymap } from "@codemirror/view";
 import { EditorState } from "@codemirror/state";
 import { defaultKeymap } from "@codemirror/commands";
 import { python } from "@codemirror/lang-python";
+import { marked } from "marked";
 
 function send(model, action, extra = {}) {
   model.send({ action, ...extra });
@@ -57,6 +58,10 @@ function Cell({ model, cell }) {
   useEffect(() => { setSrc(cell.source); }, [cell.source]);
   const commit = () => send(model, "edit", { id: cell.id, source: src });
 
+  // Note/AI cells are markdown — default to rendered preview, toggle to edit.
+  const markdownCell = cell.type === "note" || cell.type === "ai";
+  const [preview, setPreview] = useState(markdownCell);
+
   const controls = h("div", { class: "sv-controls" }, [
     h("span", { class: "sv-type" }, cell.type),
     h("button", { onClick: () => send(model, "move", { id: cell.id, direction: "up" }) }, "↑"),
@@ -70,6 +75,9 @@ function Cell({ model, cell }) {
       }),
       " ctx",
     ]),
+    markdownCell
+      ? h("button", { onClick: () => setPreview(!preview) }, preview ? "Edit" : "Preview")
+      : null,
     h("button", { onClick: () => send(model, "delete", { id: cell.id }) }, "✕"),
   ]);
 
@@ -90,6 +98,12 @@ function Cell({ model, cell }) {
       }),
       h("button", { onClick: () => send(model, "prompt", { id: cell.id, source: src }) }, "Send"),
     ]);
+  } else if (preview) {
+    body = h("div", {
+      class: "sv-md",
+      onDblClick: () => setPreview(false),
+      dangerouslySetInnerHTML: { __html: marked.parse(src || "") },
+    });
   } else {
     body = h("textarea", {
       class: "sv-ta",
@@ -152,6 +166,12 @@ const STYLE = `
 .sv-out{background:#f6f8fa;padding:6px;border-radius:4px;white-space:pre-wrap;margin-top:4px}
 .sv-err{background:#fff0f0;color:#b00}
 .sv-ai{background:#f7f9ff}
+.sv-md{padding:4px 2px;line-height:1.5}
+.sv-md h1,.sv-md h2,.sv-md h3{margin:.4em 0 .2em}
+.sv-md pre{background:#f6f8fa;padding:8px;border-radius:4px;overflow:auto}
+.sv-md code{background:#f0f1f3;padding:1px 4px;border-radius:3px}
+.sv-md pre code{background:none;padding:0}
+.sv-md p{margin:.4em 0}
 `;
 
 function render({ model, el }) {

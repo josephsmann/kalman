@@ -247,7 +247,8 @@ blindly hit **Run all**.
 | `ModuleNotFoundError: No module named 'solveit_widget'` | marimo launched outside the project env | Always start with `uv run marimo edit ...` from `solveit-widget/`, not a global marimo. |
 | `ModuleNotFoundError: No module named 'anthropic'` when sending a prompt | Default Claude client, deps missing | Run `uv sync --extra dev`; ensure you launched via `uv run`. |
 | Widget shows "frontend not built yet" | The JS bundle wasn't built | Run `cd frontend && npm install && npm run build`. |
-| Prompt returns `⚠ LLM error: ...` | Bad/missing API key, network, or rate limit | Check `ANTHROPIC_API_KEY`; the error text shows the cause. The document is never corrupted by an LLM failure. |
+| Prompt returns `⚠ LLM error: Could not resolve authentication method...` | `ANTHROPIC_API_KEY` wasn't set in the shell that **launched** marimo | Export the key, then start marimo *in that same shell*: `export ANTHROPIC_API_KEY=sk-ant-...; uv run marimo edit demo.py`. Setting it after the server is running won't help — restart the server. |
+| Prompt returns `⚠ LLM error: ...` (other) | Network or rate limit | The error text shows the cause; the document is never corrupted by an LLM failure. Just send again. |
 | Editor doesn't show changes after **Run all** | Stale build | Rebuild the frontend (`npm run build`); recent versions sync editors to backend changes. |
 | Port already in use | Another marimo on that port | Pick another port: `-p 2719`. |
 

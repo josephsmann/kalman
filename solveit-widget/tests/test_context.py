@@ -53,3 +53,24 @@ def test_count_tokens_grows_with_content():
     small = asm.count_tokens([{"role": "user", "content": "hi"}])
     big = asm.count_tokens([{"role": "user", "content": "hi" * 1000}])
     assert big > small
+
+
+def test_adjacent_ai_cells_produce_no_empty_user_message():
+    d = Document()
+    d.add(Cell(id="a1", type="ai", source="first"))
+    d.add(Cell(id="a2", type="ai", source="second"))
+    d.add(Cell(id="p", type="prompt", source="go"))
+    msgs = ContextAssembler().build(d, "p")
+    assert all(m["content"] != "" for m in msgs)
+    assert [m["role"] for m in msgs] == ["assistant", "assistant", "user"]
+
+
+def test_error_output_renders_error_label():
+    d = Document()
+    d.add(Cell(id="c", type="code", source="1/0",
+               output=CellOutput(error="ZeroDivisionError: division by zero")))
+    d.add(Cell(id="p", type="prompt", source="why?"))
+    msgs = ContextAssembler().build(d, "p")
+    joined = "\n".join(m["content"] for m in msgs)
+    assert "Error:" in joined
+    assert "ZeroDivisionError" in joined

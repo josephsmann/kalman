@@ -88,6 +88,13 @@ class SolveItWidget(anywidget.AnyWidget):
     def export_markdown(self) -> str:
         return export_markdown(self.document)
 
+    def export_markdown_file(self) -> str | None:
+        if not self.path:
+            return None
+        md_path = str(pathlib.Path(self.path).with_suffix(".md"))
+        pathlib.Path(md_path).write_text(self.export_markdown())
+        return md_path
+
     def _new_id(self) -> str:
         return uuid.uuid4().hex
 
@@ -126,3 +133,5 @@ class SolveItWidget(anywidget.AnyWidget):
             self.toggle_context(content["id"], content["value"])
         elif action == "save":
             self.save()
+        elif action == "export":
+            self.export_markdown_file()

@@ -11,6 +11,7 @@ function send(model, action, extra = {}) {
 
 function CodeMirrorBox({ value, onChange }) {
   const ref = useRef(null);
+  const viewRef = useRef(null);
   useEffect(() => {
     const view = new EditorView({
       parent: ref.current,
@@ -25,8 +26,17 @@ function CodeMirrorBox({ value, onChange }) {
         ],
       }),
     });
+    viewRef.current = view;
     return () => view.destroy();
   }, []);
+  useEffect(() => {
+    const view = viewRef.current;
+    if (view && value !== view.state.doc.toString()) {
+      view.dispatch({
+        changes: { from: 0, to: view.state.doc.length, insert: value || "" },
+      });
+    }
+  }, [value]);
   return h("div", { ref, class: "sv-cm" });
 }
 
@@ -44,6 +54,7 @@ function Output({ output }) {
 
 function Cell({ model, cell }) {
   const [src, setSrc] = useState(cell.source);
+  useEffect(() => { setSrc(cell.source); }, [cell.source]);
   const commit = () => send(model, "edit", { id: cell.id, source: src });
 
   const controls = h("div", { class: "sv-controls" }, [
@@ -111,6 +122,7 @@ function App({ model }) {
     h("button", { onClick: () => send(model, "add", { type: "prompt" }) }, "+ Prompt"),
     h("button", { onClick: () => send(model, "run_all") }, "Run all"),
     h("button", { onClick: () => send(model, "save") }, "Save"),
+    h("button", { onClick: () => send(model, "export") }, "Export .md"),
     h("span", { class: "sv-tokens" }, `~${tokens} tokens`),
   ]);
 

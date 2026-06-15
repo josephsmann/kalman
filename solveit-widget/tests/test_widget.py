@@ -130,3 +130,20 @@ def test_token_count_includes_rendered_output():
     w.run_cell(a)
     after = w.token_count
     assert after > before
+
+
+def test_export_markdown_file(tmp_path):
+    path = tmp_path / "doc.solveit.json"
+    w = make_widget(path=str(path))
+    n = w.add_cell("note")
+    w.edit_cell(n, "hello notes")
+    md_path = w.export_markdown_file()
+    assert md_path is not None
+    assert md_path.endswith(".md")
+    import pathlib as _pl
+    assert "hello notes" in _pl.Path(md_path).read_text()
+
+
+def test_export_markdown_file_noop_without_path():
+    w = make_widget()
+    assert w.export_markdown_file() is None

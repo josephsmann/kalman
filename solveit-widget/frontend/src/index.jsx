@@ -5,6 +5,15 @@ import { EditorState } from "@codemirror/state";
 import { defaultKeymap } from "@codemirror/commands";
 import { python } from "@codemirror/lang-python";
 import { marked } from "marked";
+import markedKatex from "marked-katex-extension";
+
+// Render $...$ and $$...$$ math via KaTeX. nonStandard lets `$x$` work without
+// the surrounding-space rule. throwOnError keeps a bad formula from blanking the cell.
+marked.use(markedKatex({ throwOnError: false, nonStandard: true }));
+
+// KaTeX needs its stylesheet + fonts; pull from a pinned CDN (fonts can't be
+// inlined cheaply). Injected once per document in render().
+const KATEX_CSS = "https://cdn.jsdelivr.net/npm/katex@0.17.0/dist/katex.min.css";
 
 function send(model, action, extra = {}) {
   model.send({ action, ...extra });
@@ -184,6 +193,14 @@ const STYLE = `
 `;
 
 function render({ model, el }) {
+  // Inject the KaTeX stylesheet once per document (idempotent across cells).
+  if (!document.getElementById("sv-katex-css")) {
+    const link = document.createElement("link");
+    link.id = "sv-katex-css";
+    link.rel = "stylesheet";
+    link.href = KATEX_CSS;
+    document.head.appendChild(link);
+  }
   const style = document.createElement("style");
   style.textContent = STYLE;
   el.appendChild(style);

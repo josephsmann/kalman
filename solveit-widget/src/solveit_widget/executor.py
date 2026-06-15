@@ -25,7 +25,7 @@ class Executor:
 
         last_expr = None
         if tree.body and isinstance(tree.body[-1], ast.Expr):
-            last_expr = tree.body.pop()
+            last_expr = tree.body.pop()  # tree is a fresh parse — pop() is safe
 
         stdout, stderr = io.StringIO(), io.StringIO()
         try:

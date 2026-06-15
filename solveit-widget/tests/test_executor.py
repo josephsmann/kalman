@@ -59,3 +59,16 @@ def test_reset_clears_namespace():
     ex.reset()
     out = ex.run("x")
     assert "NameError" in out.error
+
+
+def test_stdout_captured_on_error():
+    ex = Executor()
+    out = ex.run("print('before')\n1/0")
+    assert "before" in out.stdout
+    assert "ZeroDivisionError" in out.error
+
+
+def test_none_last_expression_no_repr():
+    ex = Executor()
+    out = ex.run("None")
+    assert out.result_repr == ""

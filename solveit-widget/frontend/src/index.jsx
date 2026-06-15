@@ -112,7 +112,15 @@ function Cell({ model, cell }) {
       onBlur: commit,
     });
   }
-  return h("div", { class: `sv-cell sv-${cell.type}` }, [controls, body]);
+  let footer = null;
+  const usage = cell.metadata && cell.metadata.usage;
+  if (cell.type === "ai" && usage) {
+    const cost = usage.cost_usd != null ? `$${usage.cost_usd.toFixed(4)}` : "cost n/a";
+    const label = `${usage.model} · ${usage.input_tokens} in / ${usage.output_tokens} out · ${cost}`;
+    footer = h("div", { class: "sv-cost" }, label);
+  }
+
+  return h("div", { class: `sv-cell sv-${cell.type}` }, [controls, body, footer]);
 }
 
 function App({ model }) {
@@ -166,6 +174,7 @@ const STYLE = `
 .sv-out{background:#f6f8fa;padding:6px;border-radius:4px;white-space:pre-wrap;margin-top:4px}
 .sv-err{background:#fff0f0;color:#b00}
 .sv-ai{background:#f7f9ff}
+.sv-cost{margin-top:6px;font-size:11px;color:#999;font-family:ui-monospace,monospace}
 .sv-md{padding:4px 2px;line-height:1.5}
 .sv-md h1,.sv-md h2,.sv-md h3{margin:.4em 0 .2em}
 .sv-md pre{background:#f6f8fa;padding:8px;border-radius:4px;overflow:auto}

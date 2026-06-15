@@ -66,7 +66,12 @@ class SolveItWidget(anywidget.AnyWidget):
             reply = f"⚠ LLM error: {exc}"
         index = self.document.index(cell_id) + 1
         ai_id = self._new_id()
-        self.document.add(Cell(id=ai_id, type="ai", source=reply), index=index)
+        # Usage/cost is metadata, not dialog content — it stays out of context.
+        usage = getattr(self.llm, "last_usage", None)
+        metadata = {"usage": usage} if usage else {}
+        self.document.add(
+            Cell(id=ai_id, type="ai", source=reply, metadata=metadata), index=index
+        )
         self._sync()
 
     def delete_cell(self, cell_id: str) -> None:

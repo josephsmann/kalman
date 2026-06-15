@@ -1,3 +1,5 @@
+import pytest
+
 from solveit_widget.models import Cell, CellOutput, Document
 
 
@@ -50,6 +52,24 @@ def test_cells_above_excludes_target_and_below():
         d.add(Cell(id=cid, type="code"))
     assert [c.id for c in d.cells_above("c")] == ["a", "b"]
     assert [c.id for c in d.cells_above("a")] == []
+
+
+def test_invalid_cell_type_raises():
+    with pytest.raises(ValueError, match="type must be one of"):
+        Cell(id="x", type="invalid")
+
+
+def test_move_bad_direction_raises():
+    d = Document()
+    d.add(Cell(id="a", type="code"))
+    with pytest.raises(ValueError, match="direction must be 'up' or 'down'"):
+        d.move("a", "sideways")
+
+
+def test_cell_output_from_dict_ignores_extra_keys():
+    out = CellOutput.from_dict({"stdout": "hi", "unknown_key": "value"})
+    assert out.stdout == "hi"
+    assert out.stderr == ""
 
 
 def test_roundtrip_to_from_dict():

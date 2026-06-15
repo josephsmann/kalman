@@ -22,7 +22,13 @@ class CellOutput:
 
     @classmethod
     def from_dict(cls, d: dict) -> "CellOutput":
-        return cls(**d)
+        return cls(
+            stdout=d.get("stdout", ""),
+            stderr=d.get("stderr", ""),
+            result_repr=d.get("result_repr", ""),
+            result_html=d.get("result_html"),
+            error=d.get("error"),
+        )
 
 
 CELL_TYPES = ("code", "note", "prompt", "ai")
@@ -36,6 +42,10 @@ class Cell:
     output: CellOutput | None = None
     include_in_context: bool = True
     metadata: dict = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if self.type not in CELL_TYPES:
+            raise ValueError(f"type must be one of {CELL_TYPES}, got {self.type!r}")
 
     def to_dict(self) -> dict:
         return {
@@ -65,10 +75,7 @@ class Document:
     cells: list[Cell] = field(default_factory=list)
 
     def get(self, cell_id: str) -> Cell:
-        for c in self.cells:
-            if c.id == cell_id:
-                return c
-        raise KeyError(cell_id)
+        return self.cells[self._index(cell_id)]
 
     def _index(self, cell_id: str) -> int:
         for i, c in enumerate(self.cells):
@@ -86,6 +93,8 @@ class Document:
         self.cells.pop(self._index(cell_id))
 
     def move(self, cell_id: str, direction: str) -> None:
+        if direction not in ("up", "down"):
+            raise ValueError(f"direction must be 'up' or 'down', got {direction!r}")
         i = self._index(cell_id)
         j = i - 1 if direction == "up" else i + 1
         if 0 <= j < len(self.cells):

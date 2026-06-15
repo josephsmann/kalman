@@ -103,3 +103,30 @@ def test_save_and_reopen(tmp_path):
     w.save()
     w2 = make_widget(path=str(path))
     assert _doc(w2)["cells"][0]["source"] == "persist me"
+
+
+def test_send_prompt_surfaces_llm_error():
+    from solveit_widget.llm import LLMClient
+
+    class BoomClient(LLMClient):
+        def complete(self, messages):
+            raise RuntimeError("boom")
+
+    w = SolveItWidget(llm=BoomClient())
+    p = w.add_cell("prompt")
+    w.edit_cell(p, "hi")
+    w.send_prompt(p)
+    cells = _doc(w)["cells"]
+    assert cells[-1]["type"] == "ai"
+    assert "LLM error" in cells[-1]["source"]
+    assert "boom" in cells[-1]["source"]
+
+
+def test_token_count_includes_rendered_output():
+    w = make_widget()
+    a = w.add_cell("code")
+    w.edit_cell(a, "print('x' * 200)")
+    before = w.token_count
+    w.run_cell(a)
+    after = w.token_count
+    assert after > before

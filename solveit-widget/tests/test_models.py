@@ -72,6 +72,13 @@ def test_cell_output_from_dict_ignores_extra_keys():
     assert out.stderr == ""
 
 
+def test_document_index_public():
+    d = Document()
+    d.add(Cell(id="a", type="code"))
+    d.add(Cell(id="b", type="code"))
+    assert d.index("b") == 1
+
+
 def test_roundtrip_to_from_dict():
     d = Document()
     d.add(Cell(id="a", type="code", source="x=1",

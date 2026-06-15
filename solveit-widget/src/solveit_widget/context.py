@@ -42,6 +42,9 @@ class ContextAssembler:
             return "\n".join(parts)
         return cell.source  # note / prompt
 
+    def render_cell(self, cell: Cell) -> str:
+        return self._render(cell)
+
     def count_tokens(self, messages: list[dict]) -> int:
         chars = sum(len(m["content"]) for m in messages)
         return chars // 4

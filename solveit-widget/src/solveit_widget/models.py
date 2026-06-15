@@ -77,6 +77,9 @@ class Document:
     def get(self, cell_id: str) -> Cell:
         return self.cells[self._index(cell_id)]
 
+    def index(self, cell_id: str) -> int:
+        return self._index(cell_id)
+
     def _index(self, cell_id: str) -> int:
         for i, c in enumerate(self.cells):
             if c.id == cell_id:

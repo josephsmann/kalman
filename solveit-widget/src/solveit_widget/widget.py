@@ -60,8 +60,11 @@ class SolveItWidget(anywidget.AnyWidget):
 
     def send_prompt(self, cell_id: str) -> None:
         messages = self.assembler.build(self.document, cell_id)
-        reply = self.llm.complete(messages)
-        index = self.document._index(cell_id) + 1
+        try:
+            reply = self.llm.complete(messages)
+        except Exception as exc:
+            reply = f"⚠ LLM error: {exc}"
+        index = self.document.index(cell_id) + 1
         ai_id = self._new_id()
         self.document.add(Cell(id=ai_id, type="ai", source=reply), index=index)
         self._sync()
@@ -94,8 +97,12 @@ class SolveItWidget(anywidget.AnyWidget):
         self.save()
 
     def _estimate_tokens(self) -> int:
-        msgs = [{"role": "user", "content": c.source} for c in self.document.cells
-                if c.include_in_context]
+        msgs = []
+        for c in self.document.cells:
+            if not c.include_in_context:
+                continue
+            role = "assistant" if c.type == "ai" else "user"
+            msgs.append({"role": role, "content": self.assembler.render_cell(c)})
         return self.assembler.count_tokens(msgs)
 
     def _handle(self, widget, content, buffers) -> None:

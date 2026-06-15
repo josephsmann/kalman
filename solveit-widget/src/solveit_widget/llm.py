@@ -36,7 +36,7 @@ class ClaudeClient(LLMClient):
 
     def complete(self, messages: list[dict]) -> str:
         kwargs = dict(model=self.model, max_tokens=self.max_tokens, messages=messages)
-        if self.system:
+        if self.system is not None:
             kwargs["system"] = self.system
         resp = self._client.messages.create(**kwargs)
         return "".join(b.text for b in resp.content if b.type == "text")

@@ -146,7 +146,7 @@ const STYLE = `
 .sv-ai{background:#f7f9ff}
 `;
 
-export function render({ model, el }) {
+function render({ model, el }) {
   const style = document.createElement("style");
   style.textContent = STYLE;
   el.appendChild(style);
@@ -154,3 +154,5 @@ export function render({ model, el }) {
   el.appendChild(root);
   preactRender(h(App, { model }), root);
 }
+
+export default { render };

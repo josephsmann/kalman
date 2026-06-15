@@ -126,15 +126,23 @@ function App({ model }) {
     h("span", { class: "sv-tokens" }, `~${tokens} tokens`),
   ]);
 
+  const addBar = h("div", { class: "sv-toolbar sv-addbar" }, [
+    h("button", { onClick: () => send(model, "add", { type: "code" }) }, "+ Code"),
+    h("button", { onClick: () => send(model, "add", { type: "note" }) }, "+ Note"),
+    h("button", { onClick: () => send(model, "add", { type: "prompt" }) }, "+ Prompt"),
+  ]);
+
   return h("div", { class: "sv-app" }, [
     toolbar,
     ...doc.cells.map((c) => h(Cell, { key: c.id, model, cell: c })),
+    addBar,
   ]);
 }
 
 const STYLE = `
 .sv-app{font-family:system-ui;max-width:900px}
 .sv-toolbar{display:flex;gap:6px;align-items:center;margin-bottom:10px}
+.sv-addbar{margin-top:10px;margin-bottom:0;padding-top:8px;border-top:1px solid #eee}
 .sv-tokens{margin-left:auto;color:#888;font-size:12px}
 .sv-cell{border:1px solid #ddd;border-radius:6px;padding:8px;margin-bottom:8px}
 .sv-controls{display:flex;gap:6px;align-items:center;font-size:12px;color:#666;margin-bottom:4px}

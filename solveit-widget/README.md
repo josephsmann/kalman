@@ -23,6 +23,12 @@ mo.ui.anywidget(SolveItWidget(path="session.solveit.json"))
 Set `ANTHROPIC_API_KEY` for the default Claude backend, or pass your own
 `LLMClient` via `SolveItWidget(llm=...)`.
 
+## Full usage guide
+
+For a complete walkthrough — setup, the cell workflow, running without an API
+key, custom backends, remote/headless use, and troubleshooting — see
+[docs/USING.md](docs/USING.md).
+
 ## Develop
 
 ```bash
